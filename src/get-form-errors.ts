@@ -2,14 +2,17 @@ import { NgForm } from '@angular/forms';
 import { FormTexts } from './form-text/form-texts';
 
 /**
- * 获取表单错误信息列表.
+ * 获取表单错误信息列表
  * 
- * @export
- * @param {NgForm} form 
- * @param {FormTexts} source 
- * @returns 
+ * @param form 
+ * @param source 
+ * @param options 
  */
-export function getFormErrors(form: NgForm, source: FormTexts) {
+export function getFormErrors(form: NgForm, source: FormTexts, options?: { multi?: boolean, falsyKey?: boolean }) {
+    options = options || { 
+        multi: false,
+        falsyKey: false,
+    };
 
     if (!form)
         throw new Error('!form');
@@ -26,15 +29,39 @@ export function getFormErrors(form: NgForm, source: FormTexts) {
         let label = info.$label || name;
 
         for (const errorName of Object.keys(control.errors)) {
-            let message = info[errorName];
-            if (!message) {
+            let errorData = control.errors[errorName];
+            if (!errorData && !options.falsyKey) {
+                continue;
+            }
+
+            let errorMessage: string = null;
+            if (errorData && typeof (errorData) === 'string') {
+                errorMessage = info[errorName + '.' + errorData];
+            }
+
+            if (!errorMessage 
+                && errorData 
+                && errorData.name
+                && typeof (errorData.name) === 'string') {
+                errorMessage = info[errorName + '.' + errorData.name];
+            }
+
+            if (!errorMessage) {
+                errorMessage = info[errorName];
+            }
+
+            if (!errorMessage) {
                 if (errorName === 'required') {
-                    message = `需要${label}`;
+                    errorMessage = `需要${label}`;
                 } else {
-                    message = `${label}格式不正确`;
+                    errorMessage = `${label}格式不正确`;
                 }
             }
-            result.push(message);
+            result.push(errorMessage);
+
+            if (!options.multi) {
+                break;
+            }
         }
     }
 
